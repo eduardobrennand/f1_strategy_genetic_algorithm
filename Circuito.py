@@ -1,6 +1,6 @@
 import pandas as pd
 
-df = pd.read_parquet(path='Dados/data.parquet')
+df = pd.read_parquet(path='Dados/data_pneus.parquet')
 
 
 class Circuito():
@@ -39,11 +39,15 @@ class Circuito():
 
     def estimarTemposVoltas(self):
         # Agrupa os dados por Compound e TyreLife p/ calcular media de laptime
-        media_tempo_volta_composto_degradacao = df.groupby(
+        media_tempo_volta_composto_degradacao = self.df.groupby(
             ['Compound', 'TyreLife']).agg({'LapTime': 'mean'}).reset_index()
 
         # Cria o dicionário no formato desejado
         tempo_volta_dict = media_tempo_volta_composto_degradacao.groupby(
             'Compound')['LapTime'].apply(list).to_dict()
-
+        print('total de voltas hard computadas -> ' + str(len(tempo_volta_dict['HARD'])))
+        print('total de voltas medium computadas -> ' + str(len(tempo_volta_dict['MEDIUM'])))
+        print('total de voltas soft computadas -> ' + str(len(tempo_volta_dict['SOFT'])))
         return tempo_volta_dict
+
+
