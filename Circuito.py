@@ -12,6 +12,7 @@ class Circuito():
         self.medias_tempos_voltas = self.estimarTemposVoltas()
 
     def calcularTempoMedioPitstop(self):
+        """Calcula o tempo médio do pitstop."""
         df_pitstops = self.df.loc[(self.df['PitStopBool'])]
 
         # Ordenar os dados pelo nome do piloto e número da volta
@@ -35,9 +36,11 @@ class Circuito():
         return round(tempo_medio_pitstop)
 
     def buscarTotalVoltas(self):
+        """Retorna o total de votlas do circuito."""
         return int(self.df['LapNumber'].max())
 
     def estimarTemposVoltas(self):
+        """Estima o tempo de volta de acordo com a degradação do pneu."""
         # Agrupa os dados por Compound e TyreLife p/ calcular media de laptime
         media_tempo_volta_composto_degradacao = self.df.groupby(
             ['Compound', 'TyreLife']).agg({'LapTime': 'mean'}).reset_index()
@@ -45,9 +48,7 @@ class Circuito():
         # Cria o dicionário no formato desejado
         tempo_volta_dict = media_tempo_volta_composto_degradacao.groupby(
             'Compound')['LapTime'].apply(list).to_dict()
-        print('total de voltas hard computadas -> ' + str(len(tempo_volta_dict['HARD'])))
-        print('total de voltas medium computadas -> ' + str(len(tempo_volta_dict['MEDIUM'])))
-        print('total de voltas soft computadas -> ' + str(len(tempo_volta_dict['SOFT'])))
+
         return tempo_volta_dict
 
 
