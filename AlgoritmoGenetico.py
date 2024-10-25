@@ -1,6 +1,7 @@
+from collections import Counter
 from Circuito import Circuito
-import numpy as np
 import pandas as pd
+import numpy as np
 import random
 
 
@@ -15,7 +16,6 @@ class BuscaGenetica:
         self.elitismo_pp = elitismo_pp
         self.circuito = Circuito(pais)
 
-
     def inicializarBuscaGenetica(self):
         """Inicializa o algoritmo genético."""
         # Gera a primeira população totalmente randomica
@@ -24,48 +24,33 @@ class BuscaGenetica:
         print("INIIALZIZANDO ALGORITMO GENÉTICO")
         print(50 * '-')
         for p in range(self.geracoes):
-            #print(50 * '-')
-            #print("POPULACAO ATUAL: " + str(p + 1))
-            #print("TAMANHO POPULACAO: "+ str(len(populacao)))
-            #print(50 * '-')
-
             # 1. Elitismo
             selecionados_elitismo = self.selecionarMelhoresIndividuos(
                 populacao=populacao)
-            #print(50 * '-')
-            #print("TAMANHO POPULACAO ELITISMO: "+ str(len(selecionados_elitismo)))
-            #print(50 * '-')
+
             # 2. Seleção Geral
             selecionados = self.selecaoPorRoleta(
                 populacao=populacao)
-            #print(50 * '-')
-            #print("TAMANHO POP APOS ROLETA "+ str(len(selecionados)))
-            #print(50 * '-')
-            # 3. Concatenar os indivíduos do elitismo com os da seleção geral
-            selecionados = np.append(selecionados, selecionados_elitismo)
-            #print(50 * '-')
-            #print("TAMANHO POPULACAO ELITISMO + ROLETA: "+ str(len(selecionados)))
-            #print(50 * '-')
-            # 4. Cruzamento
+
+            # 3. Cruzamento
             selecionados, total_individuos_cruzados = self.cruzarIndividuos(
-                populacao=populacao)
-            #print(50 * '-')
-            #print("TOTAL INDIVIDUOS SELECIONADOS APOS CRUZAMENTO: " + str(len(selecionados)))
-            #print("TOTAL INDIVIDUOS CRUZADOS NESSA GERACAO: " + str(total_individuos_cruzados))
-            #print(50 * '-')
-            # 5. Mutação
+                populacao=selecionados)
+
+            # 4. Mutação
             selecionados, total_individuos_mutados = self.mutarIndividuos(
-                populacao=populacao)
-            #print(50 * '-')
-            #print("TOTAL INDIVIDUOS SELECIONADOS APOS MUTACAO: " + str(len(selecionados)))
-            #print("TOTAL INDIVIDUOS MUTADOS NESSA GERACAO: " + str(total_individuos_mutados))
-            #print(50 * '-')
+                populacao=selecionados)
+
+            # 5. Concatenar os indivíduos do elitismo com os da seleção geral
+
+            selecionados = np.append(selecionados, selecionados_elitismo)
             populacao = selecionados
         
             melhor_individuo = min(populacao, key=lambda x: x['Tempo'])
 
-            print("MELHOR INDIVIDUO DE TODOS")
+            print("MELHOR INDIVIDUO DA GERAÇÃO " + str(p))
             print(melhor_individuo)
+
+        return populacao, melhor_individuo
 
     def selecaoPorRoleta(self, populacao):
         """Método de seleção por roleta."""
@@ -140,20 +125,39 @@ class BuscaGenetica:
         de acordo com a estratégia utilizada."""
         contador_composto = 0
         composto_atual = individuo['OrdemCompostos'][contador_composto]
-        tempo_total = self.estimarTempoVolta(composto_atual, 1)
+        tempo_total = 0
+        voltas_composto = 1 # variável que define quantas voltas o pneu atual rodou
 
-        # Se so utilizar um tipo de composto ou não fizer pitstop,
-        # devemos penalizar.
-        if (len(set(individuo['OrdemCompostos'])) == 1) or (
-                len(individuo['PitStops']) == 0):
+        # Verifica se só utilizou um tipo de pneu
+        if (len(set(individuo['OrdemCompostos'])) == 1):
+            print('errou')
             tempo_total += 3600
 
+        # Verifica se não houveram pitstops
+        if (len(individuo['PitStops']) == 0):
+            tempo_total += 3600
+
+        # Verifica se algum tipo de composto é usado mais de três vezes
+        frequencia_compostos = Counter(individuo['OrdemCompostos'])
+        for composto, frequencia in frequencia_compostos.items():
+            if frequencia > 3:
+                tempo_total += 3600
+
+        # Verifica se houve mais de um pitstop na mesma volta
+        frequencia_pitstops = Counter(individuo['PitStops'])
+        for pitstop, frequencia in frequencia_pitstops.items():
+            if frequencia > 1:
+                tempo_total += 3600
+
         for volta in range(1, self.circuito.total_voltas):
-            tempo_total += self.estimarTempoVolta(composto_atual, volta)
+            tempo_volta = self.estimarTempoVolta(composto_atual, voltas_composto)
+            tempo_total += tempo_volta
+            voltas_composto += 1
             if volta in individuo['PitStops']:
                 tempo_total += self.circuito.media_tempo_pitstop
                 contador_composto += 1
                 composto_atual = individuo['OrdemCompostos'][contador_composto]
+                voltas_composto = 1
 
         return round(tempo_total, 2)
 
@@ -170,9 +174,9 @@ class BuscaGenetica:
             media_tempo_volta = media_tempos_voltas[composto][volta]
         else:
             diferenca_volta = volta - len(media_tempos_voltas[composto])
-            # Adicionamos 0.5s a cada volta que não temos mapeada no dicionario
+            # Adicionamos 0.1s a cada volta que não temos mapeada no dicionario
             media_tempo_volta = media_tempos_voltas[composto][-1] + (
-                0.5 * diferenca_volta)
+                0.1 * diferenca_volta)
 
         return media_tempo_volta
 
@@ -187,9 +191,9 @@ class BuscaGenetica:
         return selecionados_elitismo
 
     def cruzarIndividuos(self, populacao):
+        """Método para fazer o crossover entre indíviduos."""
         selecionados = []
         total_individuos_cruzados = 0
-
         while len(selecionados) < self.populacao:
             parente1 = random.choice(populacao).copy()
             parente2 = random.choice(populacao).copy()
@@ -223,6 +227,7 @@ class BuscaGenetica:
         return selecionados, total_individuos_cruzados
 
     def mutarIndividuos(self, populacao):
+        """Método para realizar a mutação em um indíviduo."""
         selecionados = []
         total_individuos_mutados = 0
 
@@ -270,21 +275,11 @@ class BuscaGenetica:
                 selecionados.append(individuo)
             else:
                 selecionados.append(individuo)
-        
+
         return selecionados, total_individuos_mutados
-            
-# testes
-ga = BuscaGenetica(1000, 0.2, 0.2, 200, 0.1, 'Hungary')
-pop = ga.gerarPopulacao()
+   
+# Configuração teste
+ga1 = BuscaGenetica(500, 0.01, 0.1, 500, 0.1, 'Italy')
 
-individuo = {
-    'OrdemCompostos': ['SOFT', 'MEDIUM'],
-    'PitStops': [25]
-}
-
-individuo['Tempo'] = ga.avaliarIndividuo(individuo)
-
-
-ga.inicializarBuscaGenetica()
-print(ga.circuito.total_voltas)
-print(individuo)
+# Melhor configuração encontrada pelo Analise.py:
+ga2 = BuscaGenetica(50, 0.01, 0.5, 300, 0.1, 'Italy')
