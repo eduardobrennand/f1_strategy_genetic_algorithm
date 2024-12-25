@@ -47,8 +47,8 @@ class BuscaGenetica:
         
             melhor_individuo = min(populacao, key=lambda x: x['Tempo'])
 
-            print("MELHOR INDIVIDUO DA GERAÇÃO " + str(p))
-            print(melhor_individuo)
+            # print("MELHOR INDIVIDUO DA GERAÇÃO " + str(p))
+            # print(melhor_individuo)
 
         return populacao, melhor_individuo
 
@@ -130,7 +130,6 @@ class BuscaGenetica:
 
         # Verifica se só utilizou um tipo de pneu
         if (len(set(individuo['OrdemCompostos'])) == 1):
-            print('errou')
             tempo_total += 3600
 
         # Verifica se não houveram pitstops
@@ -199,6 +198,19 @@ class BuscaGenetica:
             parente2 = random.choice(populacao).copy()
             ponto_corte_compostos = random.randint(0, min(len(parente1['OrdemCompostos']), len(parente2['OrdemCompostos'])))
             ponto_corte_pitstops = random.randint(0, min(len(parente1['PitStops']), len(parente2['PitStops'])))
+            parente1.pop('Tempo')
+            parente2.pop('Tempo')
+            print('Ponto de corte para o cruzamento dos compostos')
+            print(ponto_corte_compostos)
+
+            print('Ponto de corte para o cruzamento dos pitstops')
+            print(ponto_corte_pitstops)
+
+            print('Pai 1')
+            print(parente1)
+
+            print('Pai 2')
+            print(parente2)
 
             filho1 = {
                 'OrdemCompostos': parente1['OrdemCompostos'][:ponto_corte_compostos] + parente2['OrdemCompostos'][ponto_corte_compostos:],
@@ -209,6 +221,14 @@ class BuscaGenetica:
                 'OrdemCompostos': parente2['OrdemCompostos'][:ponto_corte_compostos] + parente1['OrdemCompostos'][ponto_corte_compostos:],
                 'PitStops': sorted(parente2['PitStops'][:ponto_corte_pitstops] + parente1['PitStops'][ponto_corte_pitstops:])
             }
+
+            print('Filho gerado 1:')
+            print(filho1)
+
+            print('Filho gerado 2:')
+            print(filho2)
+
+            break
 
             filho1['Tempo'] = self.avaliarIndividuo(filho1)
             filho2['Tempo'] = self.avaliarIndividuo(filho2)
@@ -239,16 +259,17 @@ class BuscaGenetica:
                 indice_pneu = random.randint(0, len(individuo['OrdemCompostos']) - 1)
                 novo_pneu = self.escolherCompostoAleatorio()
                 individuo['OrdemCompostos'][indice_pneu] = novo_pneu
-
                 total_individuos_mutados += 1
                 individuo['Tempo'] = self.avaliarIndividuo(individuo)
                 selecionados.append(individuo)
             # 2. Mutação da volta do pitstop
             elif mutacao_pp <= self.mutacao_pb:
                 if len(individuo['PitStops']) > 0:
+                    print(individuo)
                     indice_volta = random.randint(0, len(individuo['PitStops']) - 1)
                     novo_pitstop = random.randint(1, self.circuito.total_voltas)
                     individuo['PitStops'][indice_volta] = novo_pitstop
+                    print(individuo)
                 else:
                     pitstop = random.randint(1, self.circuito.total_voltas)
                     individuo['PitStops'].append(pitstop)
@@ -282,4 +303,11 @@ class BuscaGenetica:
 ga1 = BuscaGenetica(500, 0.01, 0.1, 500, 0.1, 'Italy')
 
 # Melhor configuração encontrada pelo Analise.py:
-ga2 = BuscaGenetica(50, 0.01, 0.5, 300, 0.1, 'Italy')
+ga2 = BuscaGenetica(50, 0.5, 0.5, 300, 0.1, 'Italy')
+
+pop = ga2.gerarPopulacao()
+
+ga2.cruzarIndividuos(pop)
+
+# ga2.mutarIndividuos(pop)
+
