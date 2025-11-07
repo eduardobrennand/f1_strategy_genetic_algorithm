@@ -1,6 +1,6 @@
 import pandas as pd
 
-df = pd.read_parquet(path='Dados/data_pneus.parquet')
+df = pd.read_parquet(path='Dados/silverstone_2024.parquet')
 
 
 class Circuito():
@@ -50,5 +50,3 @@ class Circuito():
             'Compound')['LapTime'].apply(list).to_dict()
 
         return tempo_volta_dict
-
-

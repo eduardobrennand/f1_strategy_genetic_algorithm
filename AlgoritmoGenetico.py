@@ -8,13 +8,14 @@ import random
 class BuscaGenetica:
     def __init__(self, populacao, mutacao_pb,
                  cruzamento_pb, geracoes, elitismo_pp,
-                 pais):
+                 pais, chuva=None):
         self.populacao = populacao
         self.mutacao_pb = mutacao_pb
         self.cruzamento_pb = cruzamento_pb
         self.geracoes = geracoes
         self.elitismo_pp = elitismo_pp
         self.circuito = Circuito(pais)
+        self.chuva = chuva
 
     def inicializarBuscaGenetica(self):
         """Inicializa o algoritmo genético."""
@@ -44,7 +45,8 @@ class BuscaGenetica:
 
             selecionados = np.append(selecionados, selecionados_elitismo)
             populacao = selecionados
-        
+            # print("POPULACAO DA GEN " + str(p))
+            # print(populacao)
             melhor_individuo = min(populacao, key=lambda x: x['Tempo'])
 
             # print("MELHOR INDIVIDUO DA GERAÇÃO " + str(p))
@@ -128,6 +130,11 @@ class BuscaGenetica:
         tempo_total = 0
         voltas_composto = 1 # variável que define quantas voltas o pneu atual rodou
 
+        if self.chuva:
+            volta_chuva_inicio = 18
+            volta_chuva_fim = 38
+            ganho_penalidade = 4
+
         # Verifica se só utilizou um tipo de pneu
         if (len(set(individuo['OrdemCompostos'])) == 1):
             tempo_total += 3600
@@ -152,8 +159,15 @@ class BuscaGenetica:
             tempo_volta = self.estimarTempoVolta(composto_atual, voltas_composto)
             tempo_total += tempo_volta
             voltas_composto += 1
+
+            if self.chuva:
+                if volta_chuva_inicio <= volta <= volta_chuva_fim:
+                    if composto_atual != 'INTERMEDIATE':
+                        penalidade = ganho_penalidade * (volta - volta_chuva_inicio)
+                        tempo_total += penalidade
+
             if volta in individuo['PitStops']:
-                tempo_total += self.circuito.media_tempo_pitstop
+                tempo_total += self.circuito.media_tempo_pitstop + 9
                 contador_composto += 1
                 composto_atual = individuo['OrdemCompostos'][contador_composto]
                 voltas_composto = 1
@@ -162,6 +176,8 @@ class BuscaGenetica:
 
     def escolherCompostoAleatorio(self):
         """Escolhe um composto aleatório."""
+        if self.chuva:
+            return random.choice(['SOFT', 'MEDIUM', 'HARD', 'INTERMEDIATE'])
         return random.choice(['SOFT', 'MEDIUM', 'HARD'])
 
     def estimarTempoVolta(self, composto, volta):
@@ -200,17 +216,17 @@ class BuscaGenetica:
             ponto_corte_pitstops = random.randint(0, min(len(parente1['PitStops']), len(parente2['PitStops'])))
             parente1.pop('Tempo')
             parente2.pop('Tempo')
-            print('Ponto de corte para o cruzamento dos compostos')
-            print(ponto_corte_compostos)
+            # print('Ponto de corte para o cruzamento dos compostos')
+            # print(ponto_corte_compostos)
 
-            print('Ponto de corte para o cruzamento dos pitstops')
-            print(ponto_corte_pitstops)
+            # print('Ponto de corte para o cruzamento dos pitstops')
+            # print(ponto_corte_pitstops)
 
-            print('Pai 1')
-            print(parente1)
+            # print('Pai 1')
+            # print(parente1)
 
-            print('Pai 2')
-            print(parente2)
+            # print('Pai 2')
+            # print(parente2)
 
             filho1 = {
                 'OrdemCompostos': parente1['OrdemCompostos'][:ponto_corte_compostos] + parente2['OrdemCompostos'][ponto_corte_compostos:],
@@ -222,13 +238,11 @@ class BuscaGenetica:
                 'PitStops': sorted(parente2['PitStops'][:ponto_corte_pitstops] + parente1['PitStops'][ponto_corte_pitstops:])
             }
 
-            print('Filho gerado 1:')
-            print(filho1)
+            # print('Filho gerado 1:')
+            # print(filho1)
 
-            print('Filho gerado 2:')
-            print(filho2)
-
-            break
+            # print('Filho gerado 2:')
+            # print(filho2)
 
             filho1['Tempo'] = self.avaliarIndividuo(filho1)
             filho2['Tempo'] = self.avaliarIndividuo(filho2)
@@ -295,19 +309,23 @@ class BuscaGenetica:
                 individuo['Tempo'] = self.avaliarIndividuo(individuo)
                 selecionados.append(individuo)
             else:
+                individuo['Tempo'] = self.avaliarIndividuo(individuo)
                 selecionados.append(individuo)
 
         return selecionados, total_individuos_mutados
-   
+
 # Configuração teste
-ga1 = BuscaGenetica(500, 0.01, 0.1, 500, 0.1, 'Italy')
+# ga1 = BuscaGenetica(500, 0.01, 0.1, 500, 0.1, 'United Kingdom')
 
 # Melhor configuração encontrada pelo Analise.py:
-ga2 = BuscaGenetica(50, 0.5, 0.5, 300, 0.1, 'Italy')
+ga2 = BuscaGenetica(50, 0.5, 0.5, 300, 0.1, 'United Kingdom', chuva=True)
+resultado = ga2.inicializarBuscaGenetica()
+print('RESULTADO:')
+print(resultado)
 
-pop = ga2.gerarPopulacao()
-
-ga2.cruzarIndividuos(pop)
-
-# ga2.mutarIndividuos(pop)
-
+melhores_individuos = []
+for i in range(50):
+    pop, m = ga2.inicializarBuscaGenetica()
+    melhores_individuos.append(m)
+melhor_individuo = min(melhores_individuos, key=lambda x: x['Tempo'])
+print(melhor_individuo)
